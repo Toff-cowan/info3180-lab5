@@ -6,7 +6,7 @@ This file creates your application.
 """
 
 from app import app, db
-from flask import render_template, request, jsonify, send_file
+from flask import render_template, request, jsonify, send_file, send_from_directory
 import os
 from app.forms import MovieForm
 from app.models import Movie
@@ -52,6 +52,26 @@ def movies():
         return jsonify({
             "errors": form_errors(form)
         }), 400
+
+@app.route('/api/v1/movies', methods=['GET'])
+def add_movies():
+    movies = Movie.query.order_by(Movie.created_at.desc()).all()
+
+    return jsonify({
+        "movies": [
+            {
+                "id": movie.id,
+                "title": movie.title,
+                "description": movie.description,
+                "poster": f"/api/v1/posters/{movie.poster}"
+            }
+            for movie in movies
+        ]
+    }), 200
+
+@app.route('/api/v1/posters/<filename>', methods=['GET'])
+def get_poster(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
     
 @app.route('/')
 def index():
