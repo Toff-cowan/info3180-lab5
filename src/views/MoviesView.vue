@@ -8,8 +8,20 @@ function fetchMovies() {
   errorMessage.value = "";
 
   fetch("/api/v1/movies")
-    .then((response) => response.json())
-    .then((data) => {
+    .then(async (response) => {
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        throw new Error("Non-JSON response from API.");
+      }
+      const data = await response.json();
+      return { ok: response.ok, data };
+    })
+    .then(({ ok, data }) => {
+      if (!ok) {
+        errorMessage.value = data.error || "Unable to load movies.";
+        movies.value = [];
+        return;
+      }
       movies.value = data.movies || [];
     })
     .catch((error) => {

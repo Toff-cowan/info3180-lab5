@@ -55,19 +55,25 @@ def movies():
 
 @app.route('/api/v1/movies', methods=['GET'])
 def add_movies():
-    movies = Movie.query.order_by(Movie.created_at.desc()).all()
+    try:
+        movies = Movie.query.order_by(Movie.created_at.desc()).all()
 
-    return jsonify({
-        "movies": [
-            {
-                "id": movie.id,
-                "title": movie.title,
-                "description": movie.description,
-                "poster": f"/api/v1/posters/{movie.poster}"
-            }
-            for movie in movies
-        ]
-    }), 200
+        return jsonify({
+            "movies": [
+                {
+                    "id": movie.id,
+                    "title": movie.title,
+                    "description": movie.description,
+                    "poster": f"/api/v1/posters/{movie.poster}"
+                }
+                for movie in movies
+            ]
+        }), 200
+    except Exception as e:
+        return jsonify({
+            "error": "Unable to fetch movies.",
+            "details": str(e)
+        }), 500
 
 @app.route('/api/v1/posters/<filename>', methods=['GET'])
 def get_poster(filename):
