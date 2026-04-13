@@ -5,15 +5,54 @@ Werkzeug Documentation:  https://werkzeug.palletsprojects.com/
 This file creates your application.
 """
 
-from app import app
+from app import app, db
 from flask import render_template, request, jsonify, send_file
 import os
-
+from app.forms import MovieForm
+from app.models import Movie
+from werkzeug.utils import secure_filename
+from flask_wtf.csrf import generate_csrf
 
 ###
 # Routing for your application.
 ###
+@app.route('/api/v1/csrf-token', methods=['GET'])
+def get_csrf():
+    return jsonify({'csrf_token': generate_csrf()})
 
+@app.route('/api/v1/movies', methods=['POST'])
+def movies():
+    form = MovieForm()
+
+    if form.validate_on_submit():
+        title = form.title.data
+        description = form.description.data
+        file = form.poster.data
+
+        # Secure filename
+        filename = secure_filename(file.filename)
+
+        # Save file to uploads folder
+        upload_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(upload_path)
+
+        # Save to database
+        movie = Movie(title=title, description=description, poster=filename)
+        db.session.add(movie)
+        db.session.commit()
+
+        return jsonify({
+            "message": "Movie Successfully added",
+            "title": title,
+            "poster": filename,
+            "description": description
+        }), 201
+
+    else:
+        return jsonify({
+            "errors": form_errors(form)
+        }), 400
+    
 @app.route('/')
 def index():
     return jsonify(message="This is the beginning of our API")
@@ -22,6 +61,12 @@ def index():
 ###
 # The functions below should be applicable to all Flask apps.
 ###
+def form_errors(form):
+    errors = []
+    for fieldName, errorMessages in form.errors.items():
+        for err in errorMessages:
+            errors.append(f"Error in the {getattr(form, fieldName).label.text} field - {err}")
+    return errors
 
 # Here we define a function to collect form errors from Flask-WTF
 # which we can later use
